@@ -26,8 +26,8 @@
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 text-orange-500 font-extrabold text-2xl mb-3 shadow-lg">
           HSE
         </div>
-        <h1 class="text-2xl font-extrabold text-slate-900">قطاع المشاريع الصناعية</h1>
-        <p class="text-sm text-slate-500 mt-1">نظام إدارة المقاولين وإصدار مخالفات السلامة</p>
+        <h1 class="text-2xl font-extrabold text-slate-900">شركة الرواد للهندسة الحديثة</h1>
+        <p class="text-sm text-slate-500 mt-1">بوابة مقاولي المشروع ومخالفات السلامة</p>
       </div>
 
       <form onsubmit="handleLogin(event)" class="space-y-4">
@@ -39,13 +39,9 @@
         <p id="loginError" class="text-red-600 text-sm font-bold text-center hidden">كود المشروع غير صحيح! يرجى التحقق.</p>
         <button type="submit"
           class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition shadow-lg">
-          دخول إلى بوابة المشروع
+          دخول
         </button>
       </form>
-
-      <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400 text-center">
-        أكواد المشاريع المعتمدة: 101 - 107
-      </div>
     </div>
   </div>
 
@@ -53,26 +49,20 @@
   <div id="appScreen" class="hidden min-h-screen flex flex-col">
     <!-- الشريط العلوي -->
     <header class="bg-slate-900 text-white shadow-lg border-b-4 border-orange-500 sticky top-0 z-30">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <div class="bg-orange-500 text-slate-950 font-black px-3 py-1.5 rounded-lg text-sm">ROWAD HSE</div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400">المشروع النشط:</span>
-              <span id="activeProjectBadge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full text-xs font-bold"></span>
-            </div>
-            <h1 class="text-base md:text-lg font-bold">سجل المقاولين وإصدار مخالفات السلامة</h1>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">المشروع:</span>
+            <span id="activeProjectBadge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-0.5 rounded-full text-sm font-extrabold"></span>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="openModal('syncModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs md:text-sm font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-            <span>🔗</span> إعدادات الربط والاستيراد
+        <div class="flex items-center gap-2">
+          <button onclick="syncFromGoogleSheet()" id="syncBtn" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-bold px-3 py-2 rounded-lg transition">
+            🔄 تحديث البيانات
           </button>
-          <button onclick="openModal('addContractorModal')" class="bg-orange-500 hover:bg-orange-600 text-slate-950 text-xs md:text-sm font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
-            <span>+</span> إضافة مقاول
-          </button>
-          <button onclick="logoutProject()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs md:text-sm font-bold px-3 py-2 rounded-lg transition">
+          <button onclick="logoutProject()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition">
             تبديل المشروع
           </button>
         </div>
@@ -80,58 +70,24 @@
     </header>
 
     <!-- المحتوى -->
-    <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-1 space-y-6">
-      <!-- بطاقات الإحصائيات -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs text-slate-500 font-bold">إجمالي مقاولي المشروع</p>
-            <p id="statContractors" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
-          </div>
-          <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">🏢</div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs text-slate-500 font-bold">المخالفات المسجلة بالمشروع</p>
-            <p id="statViolations" class="text-2xl font-extrabold text-red-600 mt-1">0</p>
-          </div>
-          <div class="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-xl">⚠️</div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs text-slate-500 font-bold">حالة الربط السحابي</p>
-            <p id="statSyncStatus" class="text-sm font-extrabold text-emerald-600 mt-1.5">متصل بـ Google Sheet & Slides</p>
-          </div>
-          <button onclick="syncFromGoogleSheet()" id="syncBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-lg">
-            🔄 مزامنة الآن
-          </button>
-        </div>
-      </div>
-
+    <main class="max-w-6xl w-full mx-auto px-4 py-6 flex-1 space-y-4">
       <!-- شريط البحث -->
-      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <input type="text" id="searchInput" oninput="renderTable()" placeholder="ابحث باسم الشركة، مسؤول المقاول، مجال العمل، أو مهندس الرواد..."
-          class="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-orange-500 focus:outline-none" />
-        <div class="text-xs text-slate-500 font-semibold">
-          مطابق لأعمدة Google Sheet الثمانية
-        </div>
+      <div class="bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+        <input type="text" id="searchInput" oninput="renderTable()" placeholder="ابحث باسم المقاول، مجال العمل، الشخص المسؤول، أو مهندس الرواد..."
+          class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:border-orange-500 focus:outline-none" />
       </div>
 
-      <!-- جدول المقاولين بالأعمدة الثمانية -->
+      <!-- الجدول المبسط بالأعمدة المطلوبة فقط -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-right border-collapse text-sm">
             <thead>
               <tr class="bg-slate-800 text-white text-xs">
-                <th class="p-3 whitespace-nowrap">طابع زمني</th>
-                <th class="p-3 whitespace-nowrap">عنوان البريد الإلكتروني</th>
-                <th class="p-3 whitespace-nowrap">مشروع</th>
-                <th class="p-3 whitespace-nowrap">اسم الشركة</th>
-                <th class="p-3 whitespace-nowrap">اسم مسؤول الشركة</th>
-                <th class="p-3 whitespace-nowrap">رقم مسؤول الشركة</th>
-                <th class="p-3 whitespace-nowrap">مجال عمل الشركة</th>
-                <th class="p-3 whitespace-nowrap">المهندس المسؤول من الرواد عن أعمال المقاول</th>
-                <th class="p-3 text-center whitespace-nowrap">إجراءات المخالفات</th>
+                <th class="p-3.5 whitespace-nowrap">اسم المقاول</th>
+                <th class="p-3.5 whitespace-nowrap">مجال عمل المقاول</th>
+                <th class="p-3.5 whitespace-nowrap">الشخص المسؤول</th>
+                <th class="p-3.5 whitespace-nowrap">المهندس المسؤول من الرواد</th>
+                <th class="p-3.5 text-center whitespace-nowrap">المخالفات</th>
               </tr>
             </thead>
             <tbody id="contractorsTableBody" class="divide-y divide-slate-100"></tbody>
@@ -145,7 +101,7 @@
   <div id="violationModal" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center p-4 z-40 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8 border-t-4 border-red-600">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h2 class="text-lg font-extrabold text-slate-900">إصدار إخطار مخالفة سلامة (Google Slides)</h2>
+        <h2 class="text-lg font-extrabold text-slate-900">إضافة مخالفة جديدة</h2>
         <button onclick="closeModal('violationModal')" class="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
       </div>
 
@@ -155,11 +111,11 @@
         <!-- البيانات المسقطة تلقائياً -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <span class="text-xs text-slate-500 block">المشروع ({{Project_NAME}}):</span>
+            <span class="text-xs text-slate-500 block">المشروع:</span>
             <span id="vioProjectDisplay" class="font-extrabold text-slate-900 text-sm"></span>
           </div>
           <div>
-            <span class="text-xs text-slate-500 block">اسم المقاول ({{CONTRACTOR_NAME}}):</span>
+            <span class="text-xs text-slate-500 block">اسم المقاول:</span>
             <span id="vioContractorDisplay" class="font-extrabold text-orange-600 text-sm"></span>
           </div>
         </div>
@@ -167,11 +123,11 @@
         <!-- التاريخ والوقت ومحرر المخالفة -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">التاريخ ({{VIOLATION_DATE}})</label>
+            <label class="block text-xs font-bold text-slate-700 mb-1">التاريخ</label>
             <input type="date" id="vioDate" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">الوقت ({{VIOLATION_TIME}})</label>
+            <label class="block text-xs font-bold text-slate-700 mb-1">الوقت</label>
             <input type="time" id="vioTime" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
           </div>
           <div>
@@ -183,12 +139,12 @@
         <!-- رفع صور المخالفة -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="border-2 border-dashed border-slate-300 rounded-xl p-3 text-center">
-            <label class="block text-xs font-bold text-slate-700 mb-1">صورة الإثبات 1 * ({{EVIDENCE_IMAGE_1}})</label>
+            <label class="block text-xs font-bold text-slate-700 mb-1">صورة الإثبات 1 *</label>
             <input type="file" accept="image/*" required onchange="handleImageUpload(event, 1)" class="text-xs w-full" />
             <img id="previewImg1" class="hidden mt-2 h-28 w-full object-cover rounded-lg border" />
           </div>
           <div class="border-2 border-dashed border-slate-200 rounded-xl p-3 text-center">
-            <label class="block text-xs font-bold text-slate-500 mb-1">صورة الإثبات 2 - اختياري ({{EVIDENCE_IMAGE_2}})</label>
+            <label class="block text-xs font-bold text-slate-500 mb-1">صورة الإثبات 2 (اختياري)</label>
             <input type="file" accept="image/*" onchange="handleImageUpload(event, 2)" class="text-xs w-full" />
             <img id="previewImg2" class="hidden mt-2 h-28 w-full object-cover rounded-lg border" />
           </div>
@@ -196,7 +152,7 @@
 
         <!-- وصف المخالفة -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">وصف المخالفة * ({{VIOLATION_DESCRIPTION}})</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">وصف المخالفة *</label>
           <textarea id="vioDescription" rows="3" required placeholder="اكتب تفاصيل المخالفة المرصودة بالموقع..."
             class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:border-orange-500 focus:outline-none"></textarea>
         </div>
@@ -204,18 +160,37 @@
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" onclick="closeModal('violationModal')" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm">إلغاء</button>
           <button type="submit" id="submitVioBtn" class="px-6 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow">
-            حفظ وإصدار الفورمة
+            حفظ وإصدار المخالفة
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ================= 4. نافذة معاينة شريحتي Google Slides والطباعة ================= -->
+  <!-- ================= 4. نافذة سجل المخالفات السابقة للمقاول ================= -->
+  <div id="historyModal" class="fixed inset-0 bg-slate-900/75 hidden items-center justify-center p-4 z-40 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl my-8 border-t-4 border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">سجل المخالفات السابقة</h3>
+          <p id="historyContractorName" class="text-xs font-bold text-orange-600 mt-0.5"></p>
+        </div>
+        <button onclick="closeModal('historyModal')" class="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
+      </div>
+
+      <div id="historyListContainer" class="mt-4 space-y-3 max-h-[65vh] overflow-y-auto pr-1"></div>
+
+      <div class="mt-4 pt-3 border-t flex justify-end">
+        <button onclick="closeModal('historyModal')" class="px-5 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 5. نافذة معاينة شريحتي Google Slides والطباعة ================= -->
   <div id="slidesPreviewModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl my-8">
       <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200 no-print">
-        <h3 class="text-lg font-extrabold text-slate-900">معاينة نموذج المخالفة (Slide 1 & Slide 2)</h3>
+        <h3 class="text-lg font-extrabold text-slate-900">إخطار المخالفة الرسمي</h3>
         <div class="flex flex-wrap gap-2">
           <a id="cloudSlidesLink" href="https://docs.google.com/presentation/d/1fYjqnHYxirDdxYSHkRAjn9mH5Q1iODPmH2Ns06BGnKc/edit?usp=sharing" target="_blank"
             class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-3 py-2 rounded-lg">
@@ -223,13 +198,13 @@
           </a>
           <a id="cloudPdfLink" href="#" target="_blank"
             class="hidden bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3 py-2 rounded-lg">
-            📄 فتح ملف PDF من Drive
+            📄 فتح PDF
           </a>
           <button onclick="downloadSlidesImage()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-lg">
             🖼️ حفظ كصورة PNG
           </button>
           <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-3 py-2 rounded-lg">
-            🖨️ طباعة / PDF
+            🖨️ طباعة
           </button>
           <button onclick="closeModal('slidesPreviewModal')" class="bg-slate-200 text-slate-800 font-bold text-xs px-3 py-2 rounded-lg">
             إغلاق
@@ -243,7 +218,7 @@
           <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center border-b-4 border-orange-500">
             <div>
               <div class="text-xs text-orange-400 font-bold">ROWAD MODERN ENGINEERING</div>
-              <div class="text-lg font-extrabold">إخطار مخالفة سلامة وصحة مهنية (Slide 1)</div>
+              <div class="text-lg font-extrabold">إخطار مخالفة سلامة وصحة مهنية</div>
             </div>
             <div class="text-left text-xs text-slate-300">HSE DEPARTMENT</div>
           </div>
@@ -270,7 +245,7 @@
         <!-- Slide 2 -->
         <div class="bg-white rounded-xl shadow border-2 border-slate-300 overflow-hidden">
           <div class="bg-slate-800 text-white px-6 py-2.5 text-sm font-bold flex justify-between">
-            <span>تفاصيل وصور المخالفة (Slide 2)</span>
+            <span>تفاصيل وصور المخالفة</span>
             <span id="outIssuedBy" class="text-orange-400"></span>
           </div>
           <div class="p-6 space-y-4">
@@ -294,59 +269,8 @@
     </div>
   </div>
 
-  <!-- ================= 5. نافذة الربط السحابي ولصق بيانات الشيت ================= -->
-  <div id="syncModal" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center p-4 z-40 overflow-y-auto">
-    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8 space-y-5">
-      <div class="flex items-center justify-between pb-3 border-b">
-        <h3 class="text-lg font-extrabold text-slate-900">الربط المباشر مع Google Sheet & Google Slides</h3>
-        <button onclick="closeModal('syncModal')" class="text-2xl font-bold text-slate-400">&times;</button>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">رابط Google Apps Script Web App URL (مربوط تلقائياً):</label>
-        <div class="flex gap-2">
-          <input type="url" id="webAppUrlInput"
-            class="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs bg-slate-50" dir="ltr" />
-          <button onclick="saveWebAppUrl()" class="bg-emerald-600 text-white font-bold text-xs px-4 py-2 rounded-xl">حفظ ومزامنة</button>
-        </div>
-      </div>
-
-      <div class="border-t pt-4">
-        <label class="block text-xs font-bold text-slate-700 mb-1">أو الصق صفوف الجدول مباشرة من Google Sheet (الأعمدة الـ 8):</label>
-        <textarea id="pasteSheetArea" rows="4" placeholder="انسخ الصفوف من شيت جوجل والصقها هنا..."
-          class="w-full p-3 border border-slate-200 rounded-xl text-xs"></textarea>
-        <div class="flex justify-between mt-2">
-          <button onclick="clearDemoData()" class="text-xs text-red-600 font-bold hover:underline">مسح البيانات المحلية</button>
-          <button onclick="importPastedRows()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-xl">استيراد الصفوف</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= 6. نافذة إضافة مقاول يدوياً ================= -->
-  <div id="addContractorModal" class="fixed inset-0 bg-slate-900/70 hidden items-center justify-center p-4 z-40">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-      <div class="flex justify-between items-center pb-3 border-b">
-        <h3 class="font-extrabold text-lg">إضافة مقاول جديد للمشروع</h3>
-        <button onclick="closeModal('addContractorModal')" class="text-2xl font-bold text-slate-400">&times;</button>
-      </div>
-      <form onsubmit="addContractorManual(event)" class="mt-4 space-y-3 text-sm">
-        <input type="text" id="newCompany" required placeholder="اسم الشركة / المقاول *" class="w-full p-2.5 border rounded-xl" />
-        <input type="text" id="newContact" required placeholder="اسم مسؤول الشركة *" class="w-full p-2.5 border rounded-xl" />
-        <input type="text" id="newPhone" required placeholder="رقم مسؤول الشركة *" class="w-full p-2.5 border rounded-xl" />
-        <input type="text" id="newField" required placeholder="مجال عمل الشركة (سقالات / كهرباء / مدني...)" class="w-full p-2.5 border rounded-xl" />
-        <input type="text" id="newRowadEng" required placeholder="المهندس المسؤول من الرواد عن أعمال المقاول *" class="w-full p-2.5 border rounded-xl" />
-        <input type="email" id="newEmail" placeholder="عنوان البريد الإلكتروني (اختياري)" class="w-full p-2.5 border rounded-xl" />
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('addContractorModal')" class="px-4 py-2 bg-slate-100 rounded-xl font-bold">إلغاء</button>
-          <button type="submit" class="px-5 py-2 bg-orange-500 text-slate-950 rounded-xl font-bold">حفظ المقاول</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script>
-    const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwsrHS2QdmJ27q3AX1EGL8R6ZlSw3vMhJ8m2i42R0c_hIoRIIVu723kfzI4PJ34ubUVkg/exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwsrHS2QdmJ27q3AX1EGL8R6ZlSw3vMhJ8m2i42R0c_hIoRIIVu723kfzI4PJ34ubUVkg/exec";
 
     const PROJECT_CODES = {
       "101": "Alstom",
@@ -359,14 +283,12 @@
     };
 
     let currentProject = sessionStorage.getItem("rowad_active_project") || null;
-    let contractors = JSON.parse(localStorage.getItem("rowad_contractors_v3") || "[]");
-    let violations = JSON.parse(localStorage.getItem("rowad_violations_v3") || "[]");
-    let webAppUrl = localStorage.getItem("rowad_webapp_url") || DEFAULT_WEB_APP_URL;
+    let contractors = JSON.parse(localStorage.getItem("rowad_contractors_v4") || "[]");
+    let violations = JSON.parse(localStorage.getItem("rowad_violations_v4") || "[]");
     let img1Data = "";
     let img2Data = "";
 
     window.onload = () => {
-      document.getElementById("webAppUrlInput").value = webAppUrl;
       if (currentProject) showApp();
     };
 
@@ -396,9 +318,11 @@
       document.getElementById("appScreen").classList.remove("hidden");
       document.getElementById("activeProjectBadge").textContent = currentProject;
       renderTable();
-      if (webAppUrl) {
-        syncFromGoogleSheet();
-      }
+      syncFromGoogleSheet();
+    }
+
+    function cleanPhone(phone) {
+      return String(phone || "").replace(/[^\d+]/g, "");
     }
 
     function renderTable() {
@@ -410,31 +334,59 @@
       });
 
       const projViolations = violations.filter(v => v.project.toLowerCase() === currentProject.toLowerCase());
-      document.getElementById("statContractors").textContent = filtered.length;
-      document.getElementById("statViolations").textContent = projViolations.length;
-
       const tbody = document.getElementById("contractorsTableBody");
+
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-slate-400 font-bold">لا يوجد مقاولون مسجلون لهذا المشروع حالياً. اضغط "مزامنة الآن" لجلب البيانات من الشيت أو أضف مقاولاً.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400 font-bold">جاري تحميل بيانات المقاولين أو لا يوجد مقاولون مسجلون لهذا المشروع حالياً.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = filtered.map(c => {
-        const count = projViolations.filter(v => v.contractorId === c.id).length;
+        const contractorVios = projViolations.filter(v =>
+          v.contractorId === c.id || v.companyName.trim().toLowerCase() === c.companyName.trim().toLowerCase()
+        );
+        const tel = cleanPhone(c.contactPhone);
+
         return `
           <tr class="hover:bg-slate-50 transition">
-            <td class="p-3 text-xs text-slate-500 whitespace-nowrap">${c.timestamp || "-"}</td>
-            <td class="p-3 text-xs text-slate-600">${c.email || "-"}</td>
-            <td class="p-3 font-bold text-slate-700 whitespace-nowrap">${c.project}</td>
-            <td class="p-3 font-extrabold text-slate-900">${c.companyName}</td>
-            <td class="p-3 text-slate-700">${c.contactName}</td>
-            <td class="p-3 font-mono text-xs text-slate-700" dir="ltr">${c.contactPhone}</td>
-            <td class="p-3"><span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">${c.workField}</span></td>
-            <td class="p-3 font-semibold text-slate-800">${c.rowadEngineer}</td>
-            <td class="p-3 text-center whitespace-nowrap">
-              <button onclick="openViolationForm('${c.id}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
-                ⚠️ تسجيل مخالفة (${count})
-              </button>
+            <!-- 1. اسم المقاول -->
+            <td class="p-3.5 font-extrabold text-slate-900">${c.companyName}</td>
+
+            <!-- 2. مجال عمل المقاول -->
+            <td class="p-3.5">
+              <span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-bold">${c.workField || "-"}</span>
+            </td>
+
+            <!-- 3. اسم الشخص المسؤول + علامة اتصال مباشر -->
+            <td class="p-3.5">
+              <div class="inline-flex items-center gap-2">
+                <span class="font-bold text-slate-800">${c.contactName || "-"}</span>
+                ${tel ? `
+                  <a href="tel:${tel}" title="اتصال بـ ${c.contactName} (${c.contactPhone})"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/>
+                    </svg>
+                  </a>
+                ` : ""}
+              </div>
+            </td>
+
+            <!-- 4. المهندس المسؤول من الرواد -->
+            <td class="p-3.5 font-bold text-slate-700">${c.rowadEngineer || "-"}</td>
+
+            <!-- 5. إضافة مخالفة + سجل المخالفات السابقة -->
+            <td class="p-3.5 text-center whitespace-nowrap">
+              <div class="inline-flex items-center gap-2">
+                <button onclick="openViolationForm('${c.id}')"
+                  class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition">
+                  + إضافة مخالفة
+                </button>
+                <button onclick="openHistoryModal('${c.id}')"
+                  class="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold px-3 py-2 rounded-lg transition">
+                  📋 السجل (${contractorVios.length})
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -455,6 +407,52 @@
       document.getElementById("previewImg1").classList.add("hidden");
       document.getElementById("previewImg2").classList.add("hidden");
       openModal("violationModal");
+    }
+
+    function openHistoryModal(contractorId) {
+      const c = contractors.find(x => x.id === contractorId);
+      if (!c) return;
+      document.getElementById("historyContractorName").textContent = `${c.companyName} — مشروع ${c.project}`;
+
+      const list = violations.filter(v =>
+        v.project.toLowerCase() === currentProject.toLowerCase() &&
+        (v.contractorId === c.id || v.companyName.trim().toLowerCase() === c.companyName.trim().toLowerCase())
+      );
+
+      const container = document.getElementById("historyListContainer");
+      if (list.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 font-bold text-sm">لا توجد مخالفات سابقة مسجلة لهذا المقاول.</div>`;
+      } else {
+        container.innerHTML = list.map((v, index) => `
+          <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+            <div class="space-y-1 flex-1 min-w-[220px]">
+              <div class="flex items-center gap-2 text-xs text-slate-500 font-bold">
+                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded">#${list.length - index}</span>
+                <span>📅 ${v.violationDate}</span>
+                <span>⏰ ${v.violationTime}</span>
+                <span>✍️ ${v.issuedBy}</span>
+              </div>
+              <p class="text-sm font-bold text-slate-900">${v.description}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${v.slidesUrl ? `<a href="${v.slidesUrl}" target="_blank" class="bg-amber-500 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg">Slides</a>` : ""}
+              ${v.pdfUrl ? `<a href="${v.pdfUrl}" target="_blank" class="bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">PDF</a>` : ""}
+              <button onclick='showSlidesPreviewById("${v.violationId}")' class="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg">
+                عرض الإخطار
+              </button>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      openModal("historyModal");
+    }
+
+    function showSlidesPreviewById(violationId) {
+      const v = violations.find(x => x.violationId === violationId);
+      if (!v) return;
+      closeModal("historyModal");
+      showSlidesPreview(v);
     }
 
     function handleImageUpload(e, num) {
@@ -489,7 +487,7 @@
     async function submitViolation(e) {
       e.preventDefault();
       const btn = document.getElementById("submitVioBtn");
-      btn.disabled = true; btn.textContent = "جاري إنشاء Slides و PDF...";
+      btn.disabled = true; btn.textContent = "جاري الإصدار...";
 
       const c = contractors.find(x => x.id === document.getElementById("vioContractorId").value);
       const record = {
@@ -505,35 +503,27 @@
         issuedBy: document.getElementById("vioIssuedBy").value,
         description: document.getElementById("vioDescription").value,
         image1Base64: img1Data,
-        image2Base64: img2Data
+        image2Base64: img2Data,
+        slidesUrl: "",
+        pdfUrl: ""
       };
 
-      violations.unshift(record);
-      localStorage.setItem("rowad_violations_v3", JSON.stringify(violations));
-
-      const pdfBtn = document.getElementById("cloudPdfLink");
-      pdfBtn.classList.add("hidden");
-
-      if (webAppUrl) {
-        try {
-          const res = await fetch(webAppUrl, {
-            method: "POST",
-            body: JSON.stringify(record)
-          });
-          const data = await res.json();
-          if (data.slidesUrl) {
-            document.getElementById("cloudSlidesLink").href = data.slidesUrl;
-          }
-          if (data.pdfUrl) {
-            pdfBtn.href = data.pdfUrl;
-            pdfBtn.classList.remove("hidden");
-          }
-        } catch (err) {
-          console.error("Sync error:", err);
-        }
+      try {
+        const res = await fetch(WEB_APP_URL, {
+          method: "POST",
+          body: JSON.stringify(record)
+        });
+        const data = await res.json();
+        if (data.slidesUrl) record.slidesUrl = data.slidesUrl;
+        if (data.pdfUrl) record.pdfUrl = data.pdfUrl;
+      } catch (err) {
+        console.error("Sync error:", err);
       }
 
-      btn.disabled = false; btn.textContent = "حفظ وإصدار الفورمة";
+      violations.unshift(record);
+      localStorage.setItem("rowad_violations_v4", JSON.stringify(violations));
+
+      btn.disabled = false; btn.textContent = "حفظ وإصدار المخالفة";
       closeModal("violationModal");
       renderTable();
       showSlidesPreview(record);
@@ -546,13 +536,26 @@
       document.getElementById("outTime").textContent = v.violationTime;
       document.getElementById("outIssuedBy").textContent = "محرر المخالفة: " + v.issuedBy;
       document.getElementById("outDescription").textContent = v.description;
-      document.getElementById("outImg1").src = v.image1Base64;
+      document.getElementById("outImg1").src = v.image1Base64 || "";
+
       if (v.image2Base64) {
         document.getElementById("outImg2").src = v.image2Base64;
         document.getElementById("outImg2Container").classList.remove("hidden");
       } else {
         document.getElementById("outImg2Container").classList.add("hidden");
       }
+
+      if (v.slidesUrl) {
+        document.getElementById("cloudSlidesLink").href = v.slidesUrl;
+      }
+      const pdfBtn = document.getElementById("cloudPdfLink");
+      if (v.pdfUrl) {
+        pdfBtn.href = v.pdfUrl;
+        pdfBtn.classList.remove("hidden");
+      } else {
+        pdfBtn.classList.add("hidden");
+      }
+
       openModal("slidesPreviewModal");
     }
 
@@ -565,91 +568,25 @@
       });
     }
 
-    function saveWebAppUrl() {
-      webAppUrl = document.getElementById("webAppUrlInput").value.trim() || DEFAULT_WEB_APP_URL;
-      localStorage.setItem("rowad_webapp_url", webAppUrl);
-      closeModal("syncModal");
-      syncFromGoogleSheet();
-    }
-
     async function syncFromGoogleSheet() {
-      if (!webAppUrl) return;
-      const statusEl = document.getElementById("statSyncStatus");
       const syncBtn = document.getElementById("syncBtn");
-      statusEl.textContent = "جاري جلب البيانات من الشيت...";
-      statusEl.className = "text-sm font-extrabold text-amber-600 mt-1.5";
       syncBtn.disabled = true;
+      syncBtn.textContent = "⏳ جاري التحديث...";
 
       try {
-        const res = await fetch(webAppUrl);
+        const res = await fetch(WEB_APP_URL);
         const data = await res.json();
         if (data.status === "success" && Array.isArray(data.contractors)) {
           contractors = data.contractors;
-          localStorage.setItem("rowad_contractors_v3", JSON.stringify(contractors));
+          localStorage.setItem("rowad_contractors_v4", JSON.stringify(contractors));
           renderTable();
-          statusEl.textContent = "متصل ومحدّث من Google Sheet";
-          statusEl.className = "text-sm font-extrabold text-emerald-600 mt-1.5";
-        } else {
-          statusEl.textContent = "تعذر قراءة البيانات";
-          statusEl.className = "text-sm font-extrabold text-red-600 mt-1.5";
         }
       } catch (e) {
-        statusEl.textContent = "خطأ في الاتصال بالشبكة";
-        statusEl.className = "text-sm font-extrabold text-red-600 mt-1.5";
+        console.error("Fetch error:", e);
       } finally {
         syncBtn.disabled = false;
+        syncBtn.textContent = "🔄 تحديث البيانات";
       }
-    }
-
-    function importPastedRows() {
-      const text = document.getElementById("pasteSheetArea").value.trim();
-      if (!text) return;
-      const lines = text.split("\n");
-      lines.forEach((line, idx) => {
-        const cols = line.split("\t");
-        if (cols.length >= 4 && cols[2] !== "مشروع") {
-          contractors.push({
-            id: "IMP_" + Date.now() + "_" + idx,
-            timestamp: cols[0] || "",
-            email: cols[1] || "",
-            project: (cols[2] || currentProject).trim(),
-            companyName: (cols[3] || "").trim(),
-            contactName: (cols[4] || "").trim(),
-            contactPhone: (cols[5] || "").trim(),
-            workField: (cols[6] || "").trim(),
-            rowadEngineer: (cols[7] || "").trim()
-          });
-        }
-      });
-      localStorage.setItem("rowad_contractors_v3", JSON.stringify(contractors));
-      document.getElementById("pasteSheetArea").value = "";
-      closeModal("syncModal");
-      renderTable();
-    }
-
-    function clearDemoData() {
-      contractors = [];
-      localStorage.setItem("rowad_contractors_v3", "[]");
-      renderTable();
-    }
-
-    function addContractorManual(e) {
-      e.preventDefault();
-      contractors.push({
-        id: "MAN_" + Date.now(),
-        timestamp: new Date().toLocaleString("ar-EG"),
-        email: document.getElementById("newEmail").value,
-        project: currentProject,
-        companyName: document.getElementById("newCompany").value,
-        contactName: document.getElementById("newContact").value,
-        contactPhone: document.getElementById("newPhone").value,
-        workField: document.getElementById("newField").value,
-        rowadEngineer: document.getElementById("newRowadEng").value
-      });
-      localStorage.setItem("rowad_contractors_v3", JSON.stringify(contractors));
-      e.target.reset();
-      closeModal("addContractorModal");
-      renderTable();
     }
 
     function openModal(id) {
