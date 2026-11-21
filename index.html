@@ -1,202 +1,494 @@
-const SLIDES_TEMPLATE_ID = "1fYjqnHYxirDdxYSHkRAjn9mH5Q1iODPmH2Ns06BGnKc";
-const CONTRACTORS_SHEET_NAME = "Form Responses 1";
-const VIOLATIONS_SHEET_NAME = "Violations_Log";
-const ROOT_FOLDER_NAME = "Rowad_HSE_Violations_PDF";
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إدارة المقاولين ومخالفات السلامة | Rowad HSE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; background-color: #f1f5f9; }
+  </style>
+</head>
+<body class="text-slate-800">
 
-function doGet(e) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. قراءة المقاولين
-    const sheet = ss.getSheetByName(CONTRACTORS_SHEET_NAME) || ss.getSheets()[0];
-    const data = sheet.getDataRange().getValues();
-    const contractors = [];
+  <!-- إشعار النجاح العائم -->
+  <div id="toastBanner" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 bg-emerald-600 text-white px-6 py-3.5 rounded-2xl shadow-2xl font-bold text-sm border-2 border-emerald-300">
+    <span class="text-xl">✅</span>
+    <span id="toastMessage">تم إنشاء المخالفة وحفظ ملف الـ PDF بنجاح!</span>
+  </div>
 
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (!row[2] && !row[3]) continue;
-      contractors.push({
-        id: "GS_" + (i + 1),
-        timestamp: row[0] ? formatDate(row[0]) : "",
-        email: String(row[1] || "").trim(),
-        project: String(row[2] || "").trim(),
-        companyName: String(row[3] || "").trim(),
-        contactName: String(row[4] || "").trim(),
-        contactPhone: String(row[5] || "").trim(),
-        workField: String(row[6] || "").trim(),
-        rowadEngineer: String(row[7] || "").trim()
+  <!-- ================= 1. بوابة الدخول بأكواد المشاريع ================= -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-t-4 border-orange-500">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 text-orange-500 font-extrabold text-2xl mb-3 shadow-lg">
+          HSE
+        </div>
+        <h1 class="text-2xl font-extrabold text-slate-900">شركة الرواد للهندسة الحديثة</h1>
+        <p class="text-sm text-slate-500 mt-1">بوابة مقاولي المشروع ومخالفات السلامة</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-2">أدخل كود المشروع للدخول</label>
+          <input type="password" id="projectPasscode" placeholder="مثال: 101" required
+            class="w-full text-center text-2xl tracking-widest font-bold px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-orange-500 focus:outline-none" />
+        </div>
+        <p id="loginError" class="text-red-600 text-sm font-bold text-center hidden">كود المشروع غير صحيح! يرجى التحقق.</p>
+        <button type="submit"
+          class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition shadow-lg">
+          دخول
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= 2. الصفحة الرئيسية للمشروع ================= -->
+  <div id="appScreen" class="hidden min-h-screen flex flex-col">
+    <!-- الشريط العلوي -->
+    <header class="bg-slate-900 text-white shadow-lg border-b-4 border-orange-500 sticky top-0 z-30">
+      <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-orange-500 text-slate-950 font-black px-3 py-1.5 rounded-lg text-sm">ROWAD HSE</div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">المشروع:</span>
+            <span id="activeProjectBadge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-0.5 rounded-full text-sm font-extrabold"></span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="syncFromGoogleSheet()" id="syncBtn" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-bold px-3 py-2 rounded-lg transition">
+            🔄 تحديث
+          </button>
+          <button onclick="logoutProject()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition">
+            تبديل المشروع
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- المحتوى -->
+    <main class="max-w-5xl w-full mx-auto px-4 py-5 flex-1 space-y-4">
+      <!-- شريط البحث -->
+      <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+        <input type="text" id="searchInput" oninput="renderContractors()" placeholder="ابحث باسم المقاول، التخصص، الشخص المسؤول، أو مهندس الرواد..."
+          class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:border-orange-500 focus:outline-none" />
+      </div>
+
+      <!-- قائمة بطاقات المقاولين -->
+      <div id="contractorsList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </main>
+  </div>
+
+  <!-- ================= 3. نافذة إضافة مخالفة جديدة ================= -->
+  <div id="violationModal" class="fixed inset-0 bg-slate-900/75 hidden items-center justify-center p-4 z-40 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl my-8 border-t-4 border-red-600">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h2 class="text-lg font-extrabold text-slate-900">إضافة مخالفة جديدة</h2>
+        <button onclick="closeModal('violationModal')" class="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
+      </div>
+
+      <form onsubmit="submitViolation(event)" class="mt-4 space-y-4">
+        <input type="hidden" id="vioContractorId" />
+
+        <!-- البيانات المسقطة تلقائياً -->
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div>
+            <span class="text-xs text-slate-500 block">المشروع:</span>
+            <span id="vioProjectDisplay" class="font-extrabold text-slate-900 text-sm"></span>
+          </div>
+          <div>
+            <span class="text-xs text-slate-500 block">اسم المقاول:</span>
+            <span id="vioContractorDisplay" class="font-extrabold text-orange-600 text-sm"></span>
+          </div>
+        </div>
+
+        <!-- التاريخ والوقت ومحرر المخالفة -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">التاريخ</label>
+            <input type="date" id="vioDate" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">الوقت</label>
+            <input type="time" id="vioTime" required class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">اسم محرر المخالفة *</label>
+            <input type="text" id="vioIssuedBy" required placeholder="م. مصطفى الخولي" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+          </div>
+        </div>
+
+        <!-- رفع صور المخالفة -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="border-2 border-dashed border-slate-300 rounded-xl p-3 text-center">
+            <label class="block text-xs font-bold text-slate-700 mb-1">صورة المخالفة 1 *</label>
+            <input type="file" accept="image/*" required onchange="handleImageUpload(event, 1)" class="text-xs w-full" />
+            <img id="previewImg1" class="hidden mt-2 h-28 w-full object-cover rounded-lg border" />
+          </div>
+          <div class="border-2 border-dashed border-slate-200 rounded-xl p-3 text-center">
+            <label class="block text-xs font-bold text-slate-500 mb-1">صورة المخالفة 2 (اختياري)</label>
+            <input type="file" accept="image/*" onchange="handleImageUpload(event, 2)" class="text-xs w-full" />
+            <img id="previewImg2" class="hidden mt-2 h-28 w-full object-cover rounded-lg border" />
+          </div>
+        </div>
+
+        <!-- وصف المخالفة -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">وصف المخالفة *</label>
+          <textarea id="vioDescription" rows="3" required placeholder="اكتب تفاصيل المخالفة المرصودة بالموقع..."
+            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:border-orange-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('violationModal')" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm">إلغاء</button>
+          <button type="submit" id="submitVioBtn" class="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow">
+            إصدار المخالفة
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= 4. نافذة سجل المخالفات السابقة + ملفات PDF ================= -->
+  <div id="historyModal" class="fixed inset-0 bg-slate-900/75 hidden items-center justify-center p-4 z-40 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl my-8 border-t-4 border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">سجل المخالفات السابقة</h3>
+          <p id="historyContractorName" class="text-xs font-bold text-orange-600 mt-0.5"></p>
+        </div>
+        <button onclick="closeModal('historyModal')" class="text-slate-400 hover:text-slate-700 text-2xl font-bold">&times;</button>
+      </div>
+
+      <div id="historyListContainer" class="mt-4 space-y-3 max-h-[65vh] overflow-y-auto pr-1"></div>
+
+      <div class="mt-4 pt-3 border-t flex justify-end">
+        <button onclick="closeModal('historyModal')" class="px-5 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwsrHS2QdmJ27q3AX1EGL8R6ZlSw3vMhJ8m2i42R0c_hIoRIIVu723kfzI4PJ34ubUVkg/exec";
+
+    const PROJECT_CODES = {
+      "101": "Alstom",
+      "102": "AAS2",
+      "103": "جاد",
+      "104": "يادا",
+      "105": "Omen Canal",
+      "106": "Green Bulk",
+      "107": "Sokhna Port"
+    };
+
+    let currentProject = sessionStorage.getItem("rowad_active_project") || null;
+    let contractors = JSON.parse(localStorage.getItem("rowad_contractors_v5") || "[]");
+    let violations = JSON.parse(localStorage.getItem("rowad_violations_v5") || "[]");
+    let img1Data = "";
+    let img2Data = "";
+
+    window.onload = () => {
+      if (currentProject) showApp();
+    };
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const code = document.getElementById("projectPasscode").value.trim();
+      if (PROJECT_CODES[code]) {
+        currentProject = PROJECT_CODES[code];
+        sessionStorage.setItem("rowad_active_project", currentProject);
+        document.getElementById("loginError").classList.add("hidden");
+        showApp();
+      } else {
+        document.getElementById("loginError").classList.remove("hidden");
+      }
+    }
+
+    function logoutProject() {
+      sessionStorage.removeItem("rowad_active_project");
+      currentProject = null;
+      document.getElementById("appScreen").classList.add("hidden");
+      document.getElementById("loginScreen").classList.remove("hidden");
+      document.getElementById("projectPasscode").value = "";
+    }
+
+    function showApp() {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("appScreen").classList.remove("hidden");
+      document.getElementById("activeProjectBadge").textContent = currentProject;
+      renderContractors();
+      syncFromGoogleSheet();
+    }
+
+    function cleanPhone(phone) {
+      return String(phone || "").replace(/[^\d+]/g, "");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toastBanner");
+      document.getElementById("toastMessage").textContent = msg;
+      toast.classList.remove("hidden");
+      toast.classList.add("flex");
+      setTimeout(() => {
+        toast.classList.add("hidden");
+        toast.classList.remove("flex");
+      }, 4000);
+    }
+
+    function renderContractors() {
+      const q = document.getElementById("searchInput").value.toLowerCase();
+      const filtered = contractors.filter(c => {
+        const matchProj = c.project.toLowerCase() === currentProject.toLowerCase();
+        const matchQuery = !q || [c.companyName, c.contactName, c.workField, c.rowadEngineer].join(" ").toLowerCase().includes(q);
+        return matchProj && matchQuery;
       });
+
+      const projViolations = violations.filter(v => v.project.toLowerCase() === currentProject.toLowerCase());
+      const container = document.getElementById("contractorsList");
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="col-span-full bg-white p-8 rounded-2xl text-center text-slate-400 font-bold border border-slate-200">جاري تحميل بيانات المقاولين أو لا يوجد مقاولون مسجلون لهذا المشروع حالياً.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(c => {
+        const contractorVios = projViolations.filter(v =>
+          v.companyName.trim().toLowerCase() === c.companyName.trim().toLowerCase()
+        );
+        const latestPdf = contractorVios.find(v => v.pdfUrl)?.pdfUrl || "";
+        const tel = cleanPhone(c.contactPhone);
+
+        return `
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 hover:border-orange-400 transition flex flex-col justify-between gap-4">
+            <div class="space-y-2.5">
+              <!-- اسم المقاول والتخصص -->
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-base font-extrabold text-slate-900 leading-snug">${c.companyName}</h3>
+                <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-lg text-xs font-bold shrink-0">
+                  ${c.workField || "عام"}
+                </span>
+              </div>
+
+              <!-- اسم المسؤول + علامة التليفون -->
+              <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                <div class="text-sm">
+                  <span class="text-xs text-slate-500 ml-1">المسؤول:</span>
+                  <span class="font-bold text-slate-800">${c.contactName || "-"}</span>
+                </div>
+                ${tel ? `
+                  <a href="tel:${tel}" title="اتصال بـ ${c.contactName}"
+                    class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow transition shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C10.07 21 3 13.93 3 5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/>
+                    </svg>
+                  </a>
+                ` : ""}
+              </div>
+
+              <!-- المهندس المسؤول من الرواد -->
+              <div class="text-xs text-slate-600 px-1">
+                <span class="text-slate-400">مهندس الرواد المسؤول:</span>
+                <strong class="text-slate-800 font-bold mr-1">${c.rowadEngineer || "-"}</strong>
+              </div>
+            </div>
+
+            <!-- الأزرار + رابط آخر PDF تحتهم -->
+            <div class="pt-3 border-t border-slate-100 space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="openViolationForm('${c.id}')"
+                  class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-sm transition text-center">
+                  + إضافة مخالفة
+                </button>
+                <button onclick="openHistoryModal('${c.id}')"
+                  class="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold py-2.5 px-3 rounded-xl transition text-center">
+                  📋 سجل المخالفات (${contractorVios.length})
+                </button>
+              </div>
+
+              ${latestPdf ? `
+                <a href="${latestPdf}" target="_blank"
+                  class="block w-full text-center bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-extrabold py-2 rounded-xl transition">
+                  📄 فتح آخر مخالفة PDF
+                </a>
+              ` : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
     }
 
-    // 2. قراءة سجل المخالفات السابقة وروابط الـ PDF الخاصة بها
-    const violations = [];
-    const logSheet = ss.getSheetByName(VIOLATIONS_SHEET_NAME);
-    if (logSheet) {
-      const vData = logSheet.getDataRange().getValues();
-      for (let j = vData.length - 1; j >= 1; j--) {
-        const vRow = vData[j];
-        if (!vRow[2] && !vRow[3]) continue;
-        violations.push({
-          violationId: String(vRow[0] || ""),
-          project: String(vRow[2] || "").trim(),
-          companyName: String(vRow[3] || "").trim(),
-          violationDate: formatSimpleDate(vRow[4]),
-          violationTime: String(vRow[5] || "").trim(),
-          description: String(vRow[6] || "").trim(),
-          issuedBy: String(vRow[7] || "").trim(),
-          pdfUrl: String(vRow[11] || "").trim()
+    function openViolationForm(contractorId) {
+      const c = contractors.find(x => x.id === contractorId);
+      if (!c) return;
+      const now = new Date();
+      document.getElementById("vioContractorId").value = c.id;
+      document.getElementById("vioProjectDisplay").textContent = c.project;
+      document.getElementById("vioContractorDisplay").textContent = c.companyName;
+      document.getElementById("vioDate").value = now.toISOString().split("T")[0];
+      document.getElementById("vioTime").value = now.toTimeString().slice(0, 5);
+      document.getElementById("vioDescription").value = "";
+      img1Data = ""; img2Data = "";
+      document.getElementById("previewImg1").classList.add("hidden");
+      document.getElementById("previewImg2").classList.add("hidden");
+      openModal("violationModal");
+    }
+
+    function openHistoryModal(contractorId) {
+      const c = contractors.find(x => x.id === contractorId);
+      if (!c) return;
+      document.getElementById("historyContractorName").textContent = `${c.companyName} — مشروع ${c.project}`;
+
+      const list = violations.filter(v =>
+        v.project.toLowerCase() === currentProject.toLowerCase() &&
+        v.companyName.trim().toLowerCase() === c.companyName.trim().toLowerCase()
+      );
+
+      const container = document.getElementById("historyListContainer");
+      if (list.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 font-bold text-sm">لا توجد مخالفات سابقة مسجلة لهذا المقاول.</div>`;
+      } else {
+        container.innerHTML = list.map((v, index) => `
+          <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 font-bold">
+              <div class="flex items-center gap-2">
+                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded">#${list.length - index}</span>
+                <span>📅 ${v.violationDate}</span>
+                <span>⏰ ${v.violationTime}</span>
+              </div>
+              <span>✍️ ${v.issuedBy}</span>
+            </div>
+            <p class="text-sm font-bold text-slate-900">${v.description}</p>
+            ${v.pdfUrl ? `
+              <div class="pt-1">
+                <a href="${v.pdfUrl}" target="_blank"
+                  class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition">
+                  📄 فتح ملف PDF
+                </a>
+              </div>
+            ` : `<span class="text-xs text-slate-400">جاري تجهيز رابط PDF...</span>`}
+          </div>
+        `).join("");
+      }
+
+      openModal("historyModal");
+    }
+
+    function handleImageUpload(e, num) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          const maxW = 900;
+          const scale = Math.min(1, maxW / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.75);
+          if (num === 1) {
+            img1Data = compressed;
+            const p1 = document.getElementById("previewImg1");
+            p1.src = compressed; p1.classList.remove("hidden");
+          } else {
+            img2Data = compressed;
+            const p2 = document.getElementById("previewImg2");
+            p2.src = compressed; p2.classList.remove("hidden");
+          }
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function submitViolation(e) {
+      e.preventDefault();
+      const btn = document.getElementById("submitVioBtn");
+      btn.disabled = true;
+      btn.textContent = "جاري إنشاء المخالفة والـ PDF...";
+
+      const c = contractors.find(x => x.id === document.getElementById("vioContractorId").value);
+      const record = {
+        violationId: "VIO-" + Date.now(),
+        contractorId: c.id,
+        project: c.project,
+        companyName: c.companyName,
+        contactName: c.contactName,
+        contactPhone: c.contactPhone,
+        rowadEngineer: c.rowadEngineer,
+        violationDate: document.getElementById("vioDate").value,
+        violationTime: document.getElementById("vioTime").value,
+        issuedBy: document.getElementById("vioIssuedBy").value,
+        description: document.getElementById("vioDescription").value,
+        image1Base64: img1Data,
+        image2Base64: img2Data,
+        pdfUrl: ""
+      };
+
+      try {
+        const res = await fetch(WEB_APP_URL, {
+          method: "POST",
+          body: JSON.stringify(record)
         });
+        const data = await res.json();
+        if (data.pdfUrl) {
+          record.pdfUrl = data.pdfUrl;
+        }
+      } catch (err) {
+        console.error("Sync error:", err);
+      }
+
+      violations.unshift(record);
+      localStorage.setItem("rowad_violations_v5", JSON.stringify(violations));
+
+      btn.disabled = false;
+      btn.textContent = "إصدار المخالفة";
+
+      closeModal("violationModal");
+      renderContractors();
+      showToast("تم إنشاء المخالفة وحفظ ملف الـ PDF بنجاح!");
+    }
+
+    async function syncFromGoogleSheet() {
+      const syncBtn = document.getElementById("syncBtn");
+      syncBtn.disabled = true;
+      syncBtn.textContent = "⏳ جاري التحديث...";
+
+      try {
+        const res = await fetch(WEB_APP_URL);
+        const data = await res.json();
+        if (data.status === "success") {
+          if (Array.isArray(data.contractors)) {
+            contractors = data.contractors;
+            localStorage.setItem("rowad_contractors_v5", JSON.stringify(contractors));
+          }
+          if (Array.isArray(data.violations)) {
+            violations = data.violations;
+            localStorage.setItem("rowad_violations_v5", JSON.stringify(violations));
+          }
+          renderContractors();
+        }
+      } catch (e) {
+        console.error("Fetch error:", e);
+      } finally {
+        syncBtn.disabled = false;
+        syncBtn.textContent = "🔄 تحديث";
       }
     }
 
-    return createJsonResponse({
-      status: "success",
-      contractors: contractors,
-      violations: violations
-    });
-  } catch (err) {
-    return createJsonResponse({ status: "error", message: err.toString() });
-  }
-}
-
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    let logSheet = ss.getSheetByName(VIOLATIONS_SHEET_NAME);
-    if (!logSheet) {
-      logSheet = ss.insertSheet(VIOLATIONS_SHEET_NAME);
-      logSheet.appendRow([
-        "رقم المخالفة",
-        "تاريخ التسجيل",
-        "المشروع",
-        "اسم الشركة / المقاول",
-        "تاريخ المخالفة",
-        "وقت المخالفة",
-        "وصف المخالفة",
-        "محرر المخالفة",
-        "مسؤول المقاول",
-        "رقم الهاتف",
-        "مهندس الرواد المسؤول",
-        "رابط ملف PDF"
-      ]);
-      logSheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#1e293b").setFontColor("#ffffff");
+    function openModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove("hidden");
+      el.classList.add("flex");
     }
-
-    // 1. الوصول للفولدر الرئيسي ثم إنشاء/فتح فولدر فرعي باسم المشروع
-    const rootFolder = getOrCreateFolder(ROOT_FOLDER_NAME, DriveApp);
-    const projectName = (payload.project || "General").trim();
-    const projectFolder = getOrCreateFolder(projectName, rootFolder);
-
-    // 2. إنشاء نسخة مؤقتة من القالب داخل فولدر المشروع وتعبئتها
-    const templateFile = DriveApp.getFileById(SLIDES_TEMPLATE_ID);
-    const fileName = `مخالفة_${projectName}_${payload.companyName}_${payload.violationDate}`;
-    const copyFile = templateFile.makeCopy(fileName + "_temp", projectFolder);
-    const presentation = SlidesApp.openById(copyFile.getId());
-    const slides = presentation.getSlides();
-
-    if (slides.length >= 1) {
-      const slide1 = slides[0];
-      slide1.replaceAllText("{{CONTRACTOR_NAME}}", payload.companyName || "");
-      slide1.replaceAllText("{{Project_NAME}}", projectName);
-      slide1.replaceAllText("{{VIOLATION_DATE}}", payload.violationDate || "");
-      slide1.replaceAllText("{{VIOLATION_TIME}}", payload.violationTime || "");
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      el.classList.add("hidden");
+      el.classList.remove("flex");
     }
-
-    if (slides.length >= 2) {
-      const slide2 = slides[1];
-      slide2.replaceAllText("{{VIOLATION_DESCRIPTION}}", payload.description || "");
-      if (payload.image1Base64) {
-        replacePlaceholderWithImage(slide2, "{{EVIDENCE_IMAGE_1}}", payload.image1Base64);
-      } else {
-        slide2.replaceAllText("{{EVIDENCE_IMAGE_1}}", "");
-      }
-      if (payload.image2Base64) {
-        replacePlaceholderWithImage(slide2, "{{EVIDENCE_IMAGE_2}}", payload.image2Base64);
-      } else {
-        slide2.replaceAllText("{{EVIDENCE_IMAGE_2}}", "");
-      }
-    }
-
-    presentation.saveAndClose();
-
-    // 3. حفظ ملف الـ PDF داخل فولدر المشروع وحذف ملف السلايد المؤقت
-    const pdfBlob = copyFile.getAs(MimeType.PDF).setName(fileName + ".pdf");
-    const pdfFile = projectFolder.createFile(pdfBlob);
-    pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    const pdfUrl = pdfFile.getUrl();
-
-    copyFile.setTrashed(true);
-
-    logSheet.appendRow([
-      payload.violationId || ("VIO-" + Date.now()),
-      new Date(),
-      projectName,
-      payload.companyName || "",
-      payload.violationDate || "",
-      payload.violationTime || "",
-      payload.description || "",
-      payload.issuedBy || "",
-      payload.contactName || "",
-      payload.contactPhone || "",
-      payload.rowadEngineer || "",
-      pdfUrl
-    ]);
-
-    return createJsonResponse({
-      status: "success",
-      pdfUrl: pdfUrl
-    });
-  } catch (err) {
-    return createJsonResponse({ status: "error", message: err.toString() });
-  }
-}
-
-// دالة إنشاء أو جلب فولدر داخل فولدر أب (أو Drive الرئيسي)
-function getOrCreateFolder(folderName, parent) {
-  const folders = parent.getFoldersByName(folderName);
-  if (folders.hasNext()) return folders.next();
-  return parent.createFolder(folderName);
-}
-
-function replacePlaceholderWithImage(slide, placeholderText, base64DataUrl) {
-  const shapes = slide.getShapes();
-  const base64Parts = base64DataUrl.split(",");
-  const mimeType = base64Parts[0].match(/:(.*?);/)[1];
-  const bytes = Utilities.base64Decode(base64Parts[1]);
-  const blob = Utilities.newBlob(bytes, mimeType, "evidence.jpg");
-
-  for (let i = 0; i < shapes.length; i++) {
-    const shape = shapes[i];
-    if (shape.getText && shape.getText().asString().indexOf(placeholderText) !== -1) {
-      const left = shape.getLeft();
-      const top = shape.getTop();
-      const width = shape.getWidth();
-      const height = shape.getHeight();
-      shape.remove();
-      slide.insertImage(blob, left, top, width, height);
-      return;
-    }
-  }
-}
-
-function formatDate(val) {
-  if (val instanceof Date) {
-    return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
-  }
-  return String(val);
-}
-
-function formatSimpleDate(val) {
-  if (val instanceof Date) {
-    return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
-  }
-  return String(val || "").trim();
-}
-
-function createJsonResponse(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+  </script>
+</body>
+</html>
